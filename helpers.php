@@ -97,6 +97,81 @@ if (!function_exists("mime_type"))
 	}
 }
 
+if (!function_exists("parse_args"))
+{
+	/**
+	 * Parses the given array of arguments
+	 * according to the commands array
+	 * 
+	 * @param array	$argv	array of argument strings
+	 * @param array	$cmds	array of commands to match
+	 * 
+	 * @return array
+	 */
+	function parse_args(array $argv, array $cmds = [])
+	{
+		// Out array
+		$out = [
+			"arg"		=> null,
+			"params"	=> $cmds
+		];
+
+		// Current operation
+		$op = null;
+
+		for ($i = 1; $i < count($argv); ++$i)
+		{
+			// Match parameter
+			if (preg_match("/^(?<prefix>-{0,2})(?<param>[^-].*)$/", $argv[$i], $matches))
+			{
+				$prefix = $matches["prefix"] ?: null;
+				$param = $matches["param"];
+
+				if ($prefix === null)
+				{
+					if ($op)
+					{
+						// Get operand
+						$operand = $cmds[$op] ?? null;
+
+						if (is_callable($operand))
+							// Call function
+							$out["params"][$op] = $operand($param, $op);
+						else
+							// Set value
+							$out["params"][$op] = $param;
+						
+							// Reset op
+						$op = null;
+					}
+					else
+						// Set main parameter
+						$out["arg"] = $param;
+				}
+				else if (count($prefix) == 1)
+				{
+					// Set current op
+					$op = $param;
+				}
+				else
+				{
+					// Get operand
+					$operand = $cmds[$param];
+
+					if (is_callable($operand))
+						// If it's callable, call it
+						$out["params"][$param] = $operand($param);
+					else
+						// Else set operand flag
+						$out["params"][$param] = true;
+				}
+			}
+		}
+
+		return $out;
+	}
+}
+
 if (!function_exists("parse_string"))
 {
 	/**
